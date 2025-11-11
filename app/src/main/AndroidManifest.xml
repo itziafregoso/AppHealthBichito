@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Permisos -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!-- DataLayer API -->
+    <uses-permission android:name="com.google.android.gms.permission.WEARABLE_DATA_LAYER"/>
+
+    <queries>
+        <package android:name="com.google.android.gms" />
+    </queries>
+
+    <application
+        android:name="com.example.healthbichito.HealthBichitoApp"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.HealthBichito">
+
+        <!-- Receivers existentes -->
+        <receiver
+            android:name=".scheduling.MedicacionReceiver"
+            android:enabled="true" />
+        <receiver
+            android:name=".scheduling.MarcarTomadoReceiver"
+            android:enabled="true" />
+
+        <!-- Main Activity -->
+        <activity
+            android:name="com.example.healthbichito.MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.HealthBichito">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- ✅ Servicio que recibe los datos del reloj -->
+        <service
+            android:name="com.example.healthbichito.data.wear.WearListener"
+            android:enabled="true"
+            android:exported="true">
+
+            <intent-filter>
+                <!-- ✅ Acción CORRECTA -->
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+
+                <!-- ✅ Filtro EXACTO del path (OBLIGATORIO) -->
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:path="/health_data" />
+            </intent-filter>
+        </service>
+
+    </application>
+
+</manifest>

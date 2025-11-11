@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1092472343989",
+    "project_id": "bichitofirebase",
+    "storage_bucket": "bichitofirebase.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1092472343989:android:f6af97e2f4929c1e20ddfc",
+        "android_client_info": {
+          "package_name": "com.example.healthbichito"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_sNM13A8nikxGF_Yc6--qHIqNeCgf2_c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
