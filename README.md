@@ -1,4 +1,4 @@
-# 🌿 HealthBichito
+# 🌿 HealthBichito+
 Aplicación móvil de salud y bienestar desarrollada por Itzia Fregoso.  
 Incluye monitoreo con sensores WearOS, Firebase Authentication, Firestore, dashboards de actividad y sincronización entre app móvil y smartwatch.
 
