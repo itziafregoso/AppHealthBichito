@@ -27,7 +27,7 @@ class MedicamentoReceiver : BroadcastReceiver() {
                 notificationManager.cancel(notificationId)
 
                 // Cancelar el recordatorio repetido
-                WorkManager.getInstance(context).cancelUniqueWork("recordatorio_$medicacionId")
+                WorkManager.getInstance(context).cancelUniqueWork(medicacionId)
             }
         }
     }

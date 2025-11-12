@@ -33,6 +33,9 @@
             android:name=".scheduling.MarcarTomadoReceiver"
             android:enabled="true" />
 
+        <!-- Receiver que faltaba -->
+        <receiver android:name=".notifications.medicamentonotificacion.MedicamentoReceiver" android:exported="false" />
+
         <!-- Main Activity -->
         <activity
             android:name="com.example.healthbichito.MainActivity"
