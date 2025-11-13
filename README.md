@@ -45,4 +45,4 @@ El proyecto está organizado en capas limpias que separan UI, lógica y datos:
 ## 🧰 Cómo ejecutar el proyecto
 1. Clona el repositorio  
    ```bash
-   git clone https://github.com/TU_USUARIO/HealthBichito.git
+   git clone https://github.com/itziafregoso/AppHealthBichito.git
