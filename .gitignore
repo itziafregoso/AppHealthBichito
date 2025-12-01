@@ -2,7 +2,7 @@
 
 # Built application files
 *.apk
-*.ap_ 
+*.ap_
 *.aab
 
 # Files for the ART/Dalvik VM
@@ -39,12 +39,7 @@ proguard/
 *.jks
 *.keystore
 
-<<<<<<< HEAD
 # Google Services config
-# (solo si NO quieres subirlo)
-=======
-# Google Services config (if handled outside repo)
->>>>>>> 0207cb7db8d3f5d94102f139bb261c2cd52cb42b
 # google-services.json
 
 # Crashlytics/Firebase
@@ -65,9 +60,6 @@ proguard/
 .DS_Store
 Thumbs.db
 
-<<<<<<< HEAD
-# Fastlane
-=======
 # Gradle caches
 .gradle/
 **/local.properties
@@ -85,23 +77,12 @@ jetbrains-ai*
 # Jetpack Compose compiler cache
 .compilercache/
 
-# Fastlane (if used)
->>>>>>> 0207cb7db8d3f5d94102f139bb261c2cd52cb42b
+# Fastlane
 fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots
 fastlane/test_output
 
-<<<<<<< HEAD
-# Firebase emulator
-firebase-debug.log
-
-# Jetpack Compose compiler cache
-.compilercache/
-
-# Signing
-signing.properties
-=======
 # Firebase emulator files
 firebase-debug.log
 
@@ -114,4 +95,3 @@ test-results/
 # Lint
 lint/
 lint-results*
->>>>>>> 0207cb7db8d3f5d94102f139bb261c2cd52cb42b
