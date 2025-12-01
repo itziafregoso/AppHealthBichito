@@ -1,9 +1,10 @@
 package com.example.healthbichito.ui.theme
 
+import androidx.compose.material3.ButtonColors
 import androidx.compose.ui.graphics.Color
 
 // ========= PALETA PRINCIPAL DEL LOGO =========
-val PrimaryGreen = Color(0xFF4CAF50)
+val PrimaryGreen: Color = Color(0xFF4CAF50)
 val SecondaryGreen = Color(0xFF81C784)
 val SecondaryGreenLight = Color(0xFFD7EFD8)
 val AccentOrange = Color(0xFFFF9800)
@@ -11,6 +12,13 @@ val AccentBlue = Color(0xFF29B6F6)
 
 val AccentBlueLight = Color(0xFF6ABCE1)
 val AccentOrangeLight = Color(0xFFFFDDA2)
+
+
+val AzulFuerte = Color(0xFF004B8D)
+val AzulSuave = Color(0xFFB5D3EC)
+
+val VerdeFuerte = Color(0xFF4CAF50)
+val VerdeSuave = Color(0xFFD7EFD8)
 
 // ========= TEXTOS =========
 val TextDark = Color(0xFF1B1B1B)

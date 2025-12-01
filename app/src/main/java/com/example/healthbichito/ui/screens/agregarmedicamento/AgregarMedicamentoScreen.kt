@@ -1,7 +1,9 @@
 package com.example.healthbichito.ui.screens.agregarmedicamento
 
+import android.app.AlarmManager
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -237,16 +239,23 @@ fun AgregarMedicamentoScreen(
                             if (idGenerado != null) {
                                 nuevaMedicacion = nuevaMedicacion.copy(id = idGenerado)
 
-                                // ✅ Programar la alarma y comprobar el resultado
-                                val alarmaExactaProgramada = scheduler.programarAlarma(nuevaMedicacion)
+                                val tienePermisoAlarmas = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                    context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
+                                } else true
 
-                                if (!alarmaExactaProgramada) {
-                                    // ✅ Si no se pudo, mostrar aviso
-                                    navController.previousBackStackEntry?.savedStateHandle?.set(
-                                        "snackbar_message",
-                                        "¡Recuerda dar permiso de Alarmas para notificaciones exactas!"
-                                    )
+                                if (!tienePermisoAlarmas) {
+                                    snackbarMessage = "⚠ Permitir alarmas exactas en configuración"
+                                    snackbarType = SnackbarType.Warning
+                                    snackbarTrigger = System.currentTimeMillis()
                                 }
+
+                                scheduler.programarAlarma(nuevaMedicacion)
+
+                                // Limpiar campos y regresar
+                                nombre = ""
+                                dosis = ""
+                                observaciones = ""
+                                hora = ""
 
                                 navController.previousBackStackEntry?.savedStateHandle?.set("med_added", true)
                                 navController.popBackStack()
@@ -269,6 +278,7 @@ fun AgregarMedicamentoScreen(
                         fontSize = 18.sp
                     )
                 }
+
             }
         }
 

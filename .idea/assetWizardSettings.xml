@@ -307,7 +307,7 @@
                                 <PersistentState>
                                   <option name="values">
                                     <map>
-                                      <entry key="url" value="file:/$USER_HOME$/AppData/Local/Android/Sdk/icons/material/materialsymbolsoutlined/bookmark_check/outline_bookmark_check_24.xml" />
+                                      <entry key="url" value="file:/$USER_HOME$/AppData/Local/Android/Sdk/icons/material/materialsymbolsoutlined/heart_check/outline_heart_check_24.xml" />
                                     </map>
                                   </option>
                                 </PersistentState>
@@ -318,7 +318,7 @@
                         <option name="values">
                           <map>
                             <entry key="color" value="0050ff" />
-                            <entry key="outputName" value="ic_check" />
+                            <entry key="outputName" value="outline_heart_check_24" />
                             <entry key="sourceFile" value="C:\Proyecto" />
                           </map>
                         </option>

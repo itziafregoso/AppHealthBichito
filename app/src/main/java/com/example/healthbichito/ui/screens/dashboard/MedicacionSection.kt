@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.healthbichito.data.firebase.FirebaseMedicacionHelper
+import com.example.healthbichito.data.model.Medicacion
 import com.example.healthbichito.ui.componentes.MedicacionItem
 import com.example.healthbichito.ui.componentes.ModernSnackbar
 import com.example.healthbichito.ui.componentes.SnackbarType
@@ -25,24 +26,26 @@ fun MedicacionSection(
     navController: NavController
 ) {
 
-    // ✅ Escucha la LISTA de medicamentos (para saber si se añaden o eliminan)
     val listaMedicacion by FirebaseMedicacionHelper.obtenerMedicamentosFlow()
         .collectAsState(initial = emptyList())
+
+    val scope = rememberCoroutineScope()
 
     var snackbarMessage by remember { mutableStateOf("") }
     var snackbarType by remember { mutableStateOf(SnackbarType.Info) }
     var snackbarTrigger by remember { mutableLongStateOf(0L) }
 
-    val scope = rememberCoroutineScope()
+    // 🔹 Estado para mostrar el diálogo de confirmación
+    var medicamentoAEliminar by remember { mutableStateOf<Medicacion?>(null) }
 
-    // Region de gestión de Snackbars (mensajes informativos)
+    // 🔹 Detectar mensajes desde otras pantallas
     navController.currentBackStackEntry?.savedStateHandle?.let {
         val medAdded by it.getStateFlow("med_added", false).collectAsState()
         val alarmSnackbar by it.getStateFlow("snackbar_message", "").collectAsState()
 
         LaunchedEffect(medAdded) {
             if (medAdded) {
-                snackbarMessage = "✅ Medicación agregada"
+                snackbarMessage = "💊 Medicación agregada correctamente"
                 snackbarType = SnackbarType.Success
                 snackbarTrigger = System.currentTimeMillis()
                 it.set("med_added", false)
@@ -59,12 +62,13 @@ fun MedicacionSection(
         }
     }
 
-
+    // ============================ UI ============================
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
     ) {
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(22.dp),
@@ -82,20 +86,16 @@ fun MedicacionSection(
                 Spacer(Modifier.height(16.dp))
 
                 if (listaMedicacion.isEmpty()) {
-                    Text("No tienes medicaciones registradas 💊", color = Color.Gray, fontSize = 14.sp)
+                    Text(
+                        "No tienes medicaciones registradas 💊",
+                        color = Color.Gray,
+                        fontSize = 14.sp
+                    )
                 } else {
                     listaMedicacion.forEach { med ->
                         MedicacionItem(
                             medicacion = med,
-                            // ✅ onEstadoCambiado eliminado. Cada item gestiona su propio estado.
-                            onEliminar = {
-                                scope.launch {
-                                    FirebaseMedicacionHelper.eliminarMedicamento(med.id)
-                                    snackbarMessage = "🗑️ Eliminado correctamente"
-                                    snackbarType = SnackbarType.Success
-                                    snackbarTrigger = System.currentTimeMillis()
-                                }
-                            }
+                            onEliminar = { medicamentoAEliminar = med } // 🔹 Dispara el diálogo
                         )
                     }
                 }
@@ -104,6 +104,7 @@ fun MedicacionSection(
             }
         }
 
+        // 🔹 Botón flotante para agregar medicación
         FloatingActionButton(
             onClick = { navController.navigate("agregar_medicamento") },
             containerColor = AccentOrange,
@@ -115,6 +116,7 @@ fun MedicacionSection(
             Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
         }
 
+        // 🔹 Snackbar
         if (snackbarMessage.isNotEmpty()) {
             ModernSnackbar(
                 message = snackbarMessage,
@@ -125,5 +127,35 @@ fun MedicacionSection(
                     .padding(bottom = 60.dp)
             )
         }
+    }
+
+    // ================= CONFIRMACIÓN DE ELIMINACIÓN =================
+    medicamentoAEliminar?.let { med ->
+        AlertDialog(
+            onDismissRequest = { medicamentoAEliminar = null },
+            title = { Text("Eliminar medicación", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Seguro que quieres eliminar '${med.nombre_medicamento}'?\nSe borrarán también sus registros diarios.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            FirebaseMedicacionHelper.eliminarMedicamento(med.id)
+                            snackbarMessage = "🗑️ Eliminado correctamente"
+                            snackbarType = SnackbarType.Success
+                            snackbarTrigger = System.currentTimeMillis()
+                        }
+                        medicamentoAEliminar = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
+                ) {
+                    Text("Eliminar", color = Color.White)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { medicamentoAEliminar = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }

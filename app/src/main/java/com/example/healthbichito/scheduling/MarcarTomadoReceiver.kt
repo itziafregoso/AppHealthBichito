@@ -5,35 +5,27 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.example.healthbichito.data.firebase.FirebaseMedicacionHelper
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import androidx.work.WorkManager
+import kotlinx.coroutines.*
 
 class MarcarTomadoReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        val medicacionId = intent.getStringExtra("medicacion_id") ?: return
-
-        // ✅ Pedirle al sistema tiempo extra para la operación asíncrona
-        val pendingResult = goAsync()
+        val id = intent.getStringExtra("medicacion_id") ?: return
+        val pending = goAsync()
 
         CoroutineScope(Dispatchers.IO).launch {
-            try {
-                // 1. Marcar el medicamento como tomado en Firebase
-                FirebaseMedicacionHelper.setTomadoHoy(medicacionId, true)
+            FirebaseMedicacionHelper.setTomadoHoy(id, true)
 
-                // 2. Cancelar el recordatorio repetido futuro
-                RecordatorioRepetidoWorker.cancelarRecordatorio(context, medicacionId)
+            WorkManager.getInstance(context).cancelUniqueWork(id)
 
-                // 3. Cancelar la notificación de la barra de estado
-                val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                notificationManager.cancel(medicacionId.hashCode()) // Notificación inicial
-                notificationManager.cancel(medicacionId.hashCode() + 1) // Notificación de recordatorio
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.cancel(id.hashCode())
+            nm.cancel(id.hashCode() + 1)
 
-            } finally {
-                // ✅ Avisarle al sistema que ya terminamos
-                pendingResult.finish()
-            }
+            pending.finish()
         }
     }
 }
+
+

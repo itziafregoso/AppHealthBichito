@@ -1,10 +1,9 @@
 package com.example.healthbichito.ui.screens.dashboard
 
+import android.app.Application
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,12 +15,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DirectionsRun
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,20 +40,33 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.healthbichito.data.firebase.FirebaseAguaHelper
 import com.example.healthbichito.data.firebase.FirebaseMetaHelper
 import com.example.healthbichito.data.firebase.FirebaseUsuarioHelper
 import com.example.healthbichito.data.model.Medicacion
-import com.example.healthbichito.notifications.aguanotificacion.NotificacionMetaAgua
-import com.example.healthbichito.permissions.PermissionUtils
-import com.example.healthbichito.ui.componentes.MonitorCard
-import com.example.healthbichito.ui.componentes.WaterIntakeCard
-import com.example.healthbichito.ui.theme.PrimaryGreen
+import com.example.healthbichito.data.repositories.CaloriesRepository
+import com.example.healthbichito.data.repositories.PesoRepository
 import com.example.healthbichito.data.wear.WearListener
+import com.example.healthbichito.notifications.aguanotificacion.NotificacionAgua
+import com.example.healthbichito.permissions.PermissionUtils
+import com.example.healthbichito.ui.componentes.HealthMonitorItem
+import com.example.healthbichito.ui.componentes.WaterIntakeCardPro
+import com.example.healthbichito.ui.componentes.WeightMonitorCard
+import com.example.healthbichito.ui.theme.PrimaryGreen
+import com.example.healthbichito.ui.viewmodels.CaloriesViewModel
+import com.example.healthbichito.ui.viewmodels.CaloriesViewModelFactory
+import com.example.healthbichito.ui.viewmodels.MetasViewModel
+import com.example.healthbichito.ui.viewmodels.PesoViewModel
+import com.example.healthbichito.ui.viewmodels.PesoViewModelFactory
+import com.example.healthbichito.ui.viewmodels.RitmoCardiacoViewModel
+import com.example.healthbichito.ui.viewmodels.RitmoCardiacoViewModelFactory
+import com.example.healthbichito.ui.viewmodels.StepsViewModel
+import com.example.healthbichito.ui.viewmodels.StepsViewModelFactory
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
-
 
 @Composable
 fun DashboardScreen(
@@ -68,45 +77,92 @@ fun DashboardScreen(
     onEliminarMedicamento: (Medicacion) -> Unit,
     navController: NavController
 ) {
-
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // -----------------------------
-    // AGUA STATES
-    // -----------------------------
+    // ===== VIEWMODELS =====
+    val heartRateViewModel: RitmoCardiacoViewModel = viewModel(factory = RitmoCardiacoViewModelFactory())
+    val uiHeartState by heartRateViewModel.uiState.collectAsState()
+
+    val stepsViewModel: StepsViewModel = viewModel(factory = StepsViewModelFactory())
+    val uiStepsState by stepsViewModel.uiState.collectAsState()
+
+    val metasViewModel: MetasViewModel = viewModel()
+    val metasState by metasViewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+
+        metasViewModel.cargarMetas()
+    }
+
+    val caloriesRepository = remember {
+        CaloriesRepository(FirebaseAuth.getInstance(), FirebaseFirestore.getInstance())
+    }
+
+    val caloriesViewModel: CaloriesViewModel = viewModel(
+        factory = CaloriesViewModelFactory(
+            context.applicationContext as Application,
+            caloriesRepository
+        )
+    )
+
+    val uiCaloriesState by caloriesViewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        caloriesViewModel.cargarCaloriasDelDia()
+    }
+
+    // ===== ESCUCHA SENSORES WEAR =====
+    LaunchedEffect(Unit) {
+        WearListener.ritmoCardiaco.collect { heartRateViewModel.onHeartRateReceived(it) }
+    }
+
+    LaunchedEffect(Unit) {
+        WearListener.pasos.collect { stepsViewModel.actualizarPasos(it) }
+    }
+
+    LaunchedEffect(Unit) {
+        WearListener.calorias.collect { caloriesViewModel.onCaloriesReceived(it) }
+    }
+
+    LaunchedEffect(metasState.metaPasos, metasState.metaCalorias) {
+
+        stepsViewModel.actualizarMetaPasos(metasState.metaPasos)
+        caloriesViewModel.actualizarMetaCalorias(metasState.metaCalorias)
+    }
+    val pesoRepository = remember { PesoRepository(FirebaseAuth.getInstance(), FirebaseFirestore.getInstance()) }
+
+    val pesoViewModel: PesoViewModel = viewModel(
+        factory = PesoViewModelFactory(
+            context.applicationContext as Application,
+            pesoRepository
+        )
+    )
+
+    val uiPesoState by pesoViewModel.uiState.collectAsState()
+
+
+    // ===== ESTADO AGUA =====
     var metaAgua by remember { mutableStateOf(2000) }
     var registroId by remember { mutableStateOf("") }
     var aguaActual by remember { mutableStateOf(0) }
     var metaAlcanzada by remember { mutableStateOf(false) }
     var genero by remember { mutableStateOf("") }
 
-    // -----------------------------
-    // CARGA DE INICIAL (CORREGIDA)
-    // -----------------------------
     LaunchedEffect(true) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid
-
         if (uid != null) {
-            // Cargar metas y datos de usuario con los nuevos helpers
             val metas = FirebaseMetaHelper.getMetas(uid)
             val usuario = FirebaseUsuarioHelper.getUsuario(uid)
-
-            // Asignar valores de forma segura
             metaAgua = metas?.metaAgua ?: 2000
             genero = usuario?.genero ?: ""
         }
 
-        // El registro de agua parece ser independiente, lo dejamos como estaba
         val registro = FirebaseAguaHelper.obtenerRegistroHoy()
         registroId = registro.id_agua
         aguaActual = registro.cantidad_ml
         metaAlcanzada = aguaActual >= metaAgua
     }
-
-    val heartRate by WearListener.ritmoCardiaco.collectAsState()
-    val pasos by WearListener.pasos.collectAsState()
-    val calorias by WearListener.calorias.collectAsState()
 
     val scroll = rememberScrollState()
 
@@ -116,23 +172,19 @@ fun DashboardScreen(
             .verticalScroll(scroll)
     ) {
 
-        // ----------------------------------------------------
-        // ✅ HEADER
-        // ----------------------------------------------------
+        // ===== ENCABEZADO =====
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(10.dp, RectangleShape, clip = false)
                 .background(PrimaryGreen)
         ) {
-
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 40.dp, bottom = 30.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-
                 Text(
                     "Panel de Salud",
                     fontSize = 24.sp,
@@ -147,7 +199,6 @@ fun DashboardScreen(
                 )
             }
 
-            // Ícono de perfil (CORREGIDO: Navega a la pantalla de perfil)
             IconButton(
                 onClick = { navController.navigate("profile") },
                 modifier = Modifier
@@ -166,12 +217,9 @@ fun DashboardScreen(
             }
         }
 
-
         Spacer(Modifier.height(25.dp))
 
-        // ----------------------------------------------------
-        // ✅ MONITOREO DE SALUD
-        // ----------------------------------------------------
+        // ===== MONITOREO =====
         Text(
             "Monitoreo de Salud",
             fontSize = 20.sp,
@@ -179,43 +227,34 @@ fun DashboardScreen(
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(start = 20.dp)
         )
+        Spacer(Modifier.height(25.dp))
 
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(horizontal = 16.dp)
         ) {
-
-
-            MonitorCard(
-                titulo = "Ritmo cardiaco",
-                valor = "$heartRate bpm",
-                icono = Icons.Default.Favorite,
-                color = Color(0xFFF44336)
+            HealthMonitorItem(
+                titulo = "Ritmo cardíaco",
+                valor = uiHeartState.ultimoRitmo
             )
 
-            MonitorCard(
+            HealthMonitorItem(
                 titulo = "Pasos",
-                valor = pasos.toString(),
-                icono = Icons.Default.DirectionsRun,
-                color = Color(0xFFFF9800)
+                valor = uiStepsState.pasosTotalesHoy,
+                meta = uiStepsState.metaPasos
             )
 
-            MonitorCard(
+            HealthMonitorItem(
                 titulo = "Calorías",
-                valor = "${String.format("%.1f", calorias)} kcal",
-                icono = Icons.Default.LocalFireDepartment,
-                color = Color(0xFF29B6F6)
+                valor = uiCaloriesState.caloriasTotales.toInt(),
+                meta = uiCaloriesState.metaCalorias
             )
-
         }
 
         Spacer(Modifier.height(25.dp))
 
-        // ----------------------------------------------------
-        // ✅ INGESTA DE AGUA
-        // ----------------------------------------------------
+        // ===== AGUA =====
         Text(
             "Ingesta de Agua",
             fontSize = 20.sp,
@@ -224,18 +263,30 @@ fun DashboardScreen(
             modifier = Modifier.padding(start = 20.dp)
         )
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(25.dp))
 
         suspend fun agregarAgua() {
             if (metaAlcanzada) return
-            val nuevo = (aguaActual + 250).coerceAtMost(metaAgua)
+
+            val anterior = aguaActual
+            val nuevo = (aguaActual + 250).coerceAtMost(metaAgua) // paso de 250 ml
             aguaActual = nuevo
 
             FirebaseAguaHelper.actualizarRegistro(registroId, nuevo)
 
-            if (nuevo >= metaAgua) {
+            // Notificación de progreso en cada avance de 250 ml
+            if ((nuevo / 250) > (anterior / 250) && nuevo < metaAgua) {
+                NotificacionAgua.enviarProgreso(
+                    context = context,
+                    totalMl = nuevo,
+                    metaMl = metaAgua
+                )
+            }
+
+            // Meta alcanzada
+            if (nuevo >= metaAgua && !metaAlcanzada) {
                 PermissionUtils.vibrar(context)
-                NotificacionMetaAgua.enviar(context)
+                NotificacionAgua.enviarMetaAlcanzada(context, metaAgua)
                 metaAlcanzada = true
             }
         }
@@ -243,13 +294,14 @@ fun DashboardScreen(
         suspend fun restarAgua() {
             val nuevo = (aguaActual - 250).coerceAtLeast(0)
             aguaActual = nuevo
-
             FirebaseAguaHelper.actualizarRegistro(registroId, nuevo)
 
-            if (nuevo < metaAgua) metaAlcanzada = false
+            if (nuevo < metaAgua) {
+                metaAlcanzada = false
+            }
         }
 
-        WaterIntakeCard(
+        WaterIntakeCardPro(
             totalMl = aguaActual,
             metaMl = metaAgua,
             onAdd = { scope.launch { agregarAgua() } },
@@ -257,12 +309,31 @@ fun DashboardScreen(
             isDisabled = metaAlcanzada
         )
 
-        Spacer(Modifier.height(35.dp))
+        Spacer(Modifier.height(25.dp))
 
-        // ----------------------------------------------------
-        // ✅ MEDICACIÓN — DISEÑO LOCAL ADAPTADO
-        // ----------------------------------------------------
+        Text(
+            "Monitoreo de Peso",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(start = 20.dp),
+            color = MaterialTheme.colorScheme.onBackground
+        )
 
+        Spacer(Modifier.height(15.dp))
+
+        WeightMonitorCard(
+            pesoActual = uiPesoState.pesoActual,
+            metaPeso = uiPesoState.metaPeso,
+            metaAlcanzada = uiPesoState.metaAlcanzada,
+            onPesoIngresado = { nuevoPeso ->
+                pesoViewModel.actualizarPesoActual(nuevoPeso)
+            }
+        )
+
+
+        Spacer(Modifier.height(25.dp))
+
+        // ===== MEDICACIÓN =====
         Text(
             "Medicacion",
             fontSize = 20.sp,
@@ -271,15 +342,31 @@ fun DashboardScreen(
             modifier = Modifier.padding(start = 20.dp)
         )
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(25.dp))
 
         MedicacionSection(navController = navController)
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(25.dp))
 
+
+
+        Button(
+            onClick = {
+                navController.navigate("estadisticas")
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("Estadísticas", color = Color.White)
+        }
+
+
+        Spacer(Modifier.height(50.dp))
     }
 }
-
 
 fun saludoSegunGenero(nombre: String, genero: String): String {
     return when (genero.lowercase()) {

@@ -49,6 +49,10 @@ android {
 }
 
 dependencies {
+    implementation("com.patrykandpatrick.vico:compose-m2:1.13.0")
+    implementation("com.patrykandpatrick.vico:core:1.13.0")
+    implementation("com.patrykandpatrick.vico:views:1.13.0")
+
     // 🔥 Firebase (BOM: controla versiones automáticamente)
     implementation(platform("com.google.firebase:firebase-bom:33.3.0"))
 

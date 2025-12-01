@@ -1,5 +1,6 @@
 package com.example.healthbichito.ui.screens.perfil
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ContactPhone
 import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.FitnessCenter
@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.MonitorWeight
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,11 +49,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.healthbichito.ui.componentes.LogoutConfirmationDialog
 import com.example.healthbichito.ui.componentes.ModernSnackbar
 import com.example.healthbichito.ui.componentes.ModernTextField
 import com.example.healthbichito.ui.componentes.SnackbarType
-import com.example.healthbichito.ui.screens.perfil.PerfilLoader
+import com.example.healthbichito.ui.theme.AzulFuerte
+import com.example.healthbichito.ui.theme.AzulSuave
 import com.example.healthbichito.ui.theme.PrimaryGreen
+import com.example.healthbichito.ui.theme.VerdeFuerte
+import com.example.healthbichito.ui.theme.VerdeSuave
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,18 +68,11 @@ fun PerfilScreen(
     val uiState = viewModel.uiState
     val usuario = uiState.usuario
 
-    // --- ESTADO PARA SNACKBAR DE DATOS PERSONALES ---
     var datosSnackbarMessage by remember { mutableStateOf<String?>(null) }
-    var datosSnackbarType by remember { mutableStateOf(SnackbarType.Success) }
     var datosSnackbarTrigger by remember { mutableStateOf(0L) }
-
-    // --- ESTADO PARA SNACKBAR DE METAS ---
     var metasSnackbarMessage by remember { mutableStateOf<String?>(null) }
-    var metasSnackbarType by remember { mutableStateOf(SnackbarType.Success) }
     var metasSnackbarTrigger by remember { mutableStateOf(0L) }
-
-    val personalDataCardColor = Color(0xFFE3F2FD)
-    val goalsCardColor = Color(0xFFE8F5E9)
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -86,25 +84,22 @@ fun PerfilScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        viewModel.signOut()
-                        navController.navigate("login") { popUpTo(0) }
-                    }) {
+                    IconButton(onClick = { showLogoutDialog = true }) {
                         Icon(Icons.Default.Logout, contentDescription = "Cerrar Sesión")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = PrimaryGreen,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White,
+                    actionIconContentColor = Color.White
                 )
             )
         }
     ) { paddingValues ->
         if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            Box(Modifier.fillMaxSize()) {
+                CircularProgressIndicator(Modifier.align(Alignment.Center))
             }
         } else if (usuario != null) {
             LazyColumn(
@@ -114,171 +109,191 @@ fun PerfilScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
+
+                // DATOS PERSONALES
                 item {
                     ProfileSectionCard(
                         title = "Datos Personales",
-                        cardColor = personalDataCardColor
+                        headerColor = AzulFuerte,
+                        cardColor = AzulSuave
                     ) {
                         ModernTextField(
                             value = usuario.nombre,
                             onValueChange = {},
                             label = "Nombre",
                             icon = Icons.Default.Person,
-                            enabled = false
+                            enabled = false,
+                            tint = AzulFuerte
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(Modifier.height(8.dp))
                         ModernTextField(
                             value = usuario.email,
                             onValueChange = {},
                             label = "Email",
                             icon = Icons.Default.Email,
-                            enabled = false
+                            enabled = false,
+                            tint = AzulFuerte
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(Modifier.height(8.dp))
+
                         ModernTextField(
-                            value = usuario.perfil.altura.toString(),
-                            onValueChange = viewModel::onAlturaChanged,
+                            value = uiState.editable.altura,
+                            onValueChange = { viewModel.onCampoEditado("altura", it) },
                             label = "Altura (m)",
                             icon = Icons.Default.Height,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            tint = AzulFuerte,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(Modifier.height(8.dp))
+
                         ModernTextField(
-                            value = usuario.perfil.peso.toString(),
-                            onValueChange = viewModel::onPesoChanged,
+                            value = uiState.editable.peso,
+                            onValueChange = { viewModel.onCampoEditado("peso", it) },
                             label = "Peso (kg)",
                             icon = Icons.Default.MonitorWeight,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            tint = AzulFuerte,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        ModernTextField(
-                            value = usuario.perfil.contactoEmergencia,
-                            onValueChange = viewModel::onContactoEmergenciaChanged,
-                            label = "Contacto de Emergencia",
-                            icon = Icons.Default.ContactPhone,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(Modifier.height(16.dp))
 
                         Button(
                             onClick = {
-                                viewModel.savePerfil { message ->
-                                    datosSnackbarMessage = message
-                                    datosSnackbarType = if (message.startsWith("Error")) SnackbarType.Error else SnackbarType.Success
+                                viewModel.savePerfil { msg ->
+                                    datosSnackbarMessage = msg
                                     datosSnackbarTrigger = System.currentTimeMillis()
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = AzulFuerte)
                         ) {
-                            Text("Guardar Datos")
+                            Text("Guardar Datos", color = Color.White)
                         }
 
-                        // --- SNACKBAR PARA DATOS PERSONALES ---
                         datosSnackbarMessage?.let {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            ModernSnackbar(
-                                message = it,
-                                type = datosSnackbarType,
-                                trigger = datosSnackbarTrigger,
-                            )
+                            Spacer(Modifier.height(16.dp))
+                            ModernSnackbar(message = it, type = SnackbarType.Success, trigger = datosSnackbarTrigger)
                         }
                     }
                 }
+
+                // MIS METAS
                 item {
                     ProfileSectionCard(
                         title = "Mis Metas",
-                        cardColor = goalsCardColor
+                        headerColor = VerdeFuerte,
+                        cardColor = VerdeSuave
                     ) {
                         ModernTextField(
-                            value = usuario.metas.metaPasos.toString(),
-                            onValueChange = viewModel::onMetaPasosChanged,
+                            value = uiState.editable.metaPasos,
+                            onValueChange = { viewModel.onCampoEditado("metaPasos", it) },
                             label = "Meta de Pasos Diarios",
                             icon = Icons.Default.DirectionsWalk,
+                            tint = VerdeFuerte,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(Modifier.height(8.dp))
+
                         ModernTextField(
-                            value = usuario.metas.metaCalorias.toString(),
-                            onValueChange = viewModel::onMetaCaloriasChanged,
-                            label = "Meta de Calorías Diarias",
+                            value = uiState.editable.metaCalorias,
+                            onValueChange = { viewModel.onCampoEditado("metaCalorias", it) },
+                            label = "Meta de Calorías",
                             icon = Icons.Default.LocalFireDepartment,
+                            tint = VerdeFuerte,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(Modifier.height(8.dp))
+
                         ModernTextField(
-                            value = usuario.metas.metaAgua.toString(),
-                            onValueChange = viewModel::onMetaAguaChanged,
+                            value = uiState.editable.metaAgua,
+                            onValueChange = { viewModel.onCampoEditado("metaAgua", it) },
                             label = "Meta de Agua (ml)",
                             icon = Icons.Default.WaterDrop,
+                            tint = VerdeFuerte,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(Modifier.height(8.dp))
+
                         ModernTextField(
-                            value = usuario.metas.metaPeso.toString(),
-                            onValueChange = viewModel::onMetaPesoChanged,
+                            value = uiState.editable.metaPeso,
+                            onValueChange = { viewModel.onCampoEditado("metaPeso", it) },
                             label = "Meta de Peso (kg)",
                             icon = Icons.Default.FitnessCenter,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            tint = VerdeFuerte,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(Modifier.height(16.dp))
 
                         Button(
                             onClick = {
-                                viewModel.saveMetas { message ->
-                                    metasSnackbarMessage = message
-                                    metasSnackbarType = if (message.startsWith("Error")) SnackbarType.Error else SnackbarType.Success
+                                viewModel.saveMetas { msg ->
+                                    metasSnackbarMessage = msg
                                     metasSnackbarTrigger = System.currentTimeMillis()
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = VerdeFuerte)
                         ) {
-                            Text("Guardar Metas")
+                            Text("Guardar Metas", color = Color.White)
                         }
 
-                        // --- SNACKBAR PARA METAS ---
                         metasSnackbarMessage?.let {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            ModernSnackbar(
-                                message = it,
-                                type = metasSnackbarType,
-                                trigger = metasSnackbarTrigger,
-                            )
+                            Spacer(Modifier.height(16.dp))
+                            ModernSnackbar(message = it, type = SnackbarType.Success, trigger = metasSnackbarTrigger)
                         }
                     }
                 }
             }
-        } else {
-            // Puedes mostrar un mensaje si el usuario no se encuentra
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                Text("No se pudieron cargar los datos del usuario.")
-            }
         }
     }
+
+    if (showLogoutDialog) {
+        LogoutConfirmationDialog(
+            onConfirm = {
+                viewModel.signOut()
+                navController.navigate("login") { popUpTo(0) }
+                showLogoutDialog = false
+            },
+            onDismiss = { showLogoutDialog = false }
+        )
+    }
 }
+
 
 @Composable
 private fun ProfileSectionCard(
     title: String,
+    headerColor: Color,
     cardColor: Color,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = cardColor)
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            content()
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(headerColor)
+                    .padding(vertical = 14.dp, horizontal = 16.dp)
+            ) {
+                Text(
+                    text = title,
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                content()
+            }
         }
     }
 }
+

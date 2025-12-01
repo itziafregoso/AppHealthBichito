@@ -6,7 +6,9 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
@@ -14,62 +16,76 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.healthbichito.MainActivity
 import com.example.healthbichito.R
-import java.util.concurrent.TimeUnit
 
 class MedicacionReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
+        Log.d("MEDICACION_RECEIVER", "🔔 Alarma recibida para medicamento")
         val medicacionId = intent.getStringExtra("medicacion_id") ?: return
         val medicacionNombre = intent.getStringExtra("medicacion_nombre") ?: "Medicamento"
 
-        // 1. Mostrar la notificación inicial
         enviarNotificacionInicial(context, medicacionId, medicacionNombre)
-
+        iniciarRecordatorioCada15Min(context, medicacionId, medicacionNombre)
 
     }
 
-    private fun enviarNotificacionInicial(context: Context, medicacionId: String, medicacionNombre: String) {
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+    private fun enviarNotificacionInicial(context: Context, id: String, nombre: String) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "medicacion_channel"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Recordatorios de Medicación"
-            val descriptionText = "Notificaciones para tomar medicamentos."
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val channel = NotificationChannel(channelId, name, importance).apply {
-                description = descriptionText
-            }
-            notificationManager.createNotificationChannel(channel)
+            val channel = NotificationChannel(channelId, "Recordatorios", NotificationManager.IMPORTANCE_HIGH)
+            nm.createNotificationChannel(channel)
         }
 
-        // ✅ Intent para abrir la app
         val intentApp = Intent(context, MainActivity::class.java).apply {
+            putExtra("open_dashboard", true)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
-        val pendingIntentApp: PendingIntent = PendingIntent.getActivity(context, medicacionId.hashCode(), intentApp, PendingIntent.FLAG_IMMUTABLE)
+        val pendingIntentApp = PendingIntent.getActivity(
+            context, id.hashCode(), intentApp, PendingIntent.FLAG_IMMUTABLE
+        )
 
-        // Intent para la acción "Marcar como Tomado"
-        val intentMarcarTomado = Intent(context, MarcarTomadoReceiver::class.java).apply {
-            putExtra("medicacion_id", medicacionId)
+        val intentTomar = Intent(context, MarcarTomadoReceiver::class.java).apply {
+            putExtra("medicacion_id", id)
+            data = Uri.parse("marcar_tomado://${id}")
         }
-        val pendingIntentMarcarTomado = PendingIntent.getBroadcast(
+        val pendingTomar = PendingIntent.getBroadcast(
             context,
-            medicacionId.hashCode() + 1, // Request code único
-            intentMarcarTomado,
+            id.hashCode() + 1,
+            intentTomar,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_pastilla) // TODO: Cambiar ícono
+        val noti = NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(R.drawable.ic_pastilla)
             .setContentTitle("Hora de tu medicamento")
-            .setContentText("Es hora de tomar tu $medicacionNombre.")
+            .setContentText("Toma tu $nombre ahora.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(pendingIntentApp) // ✅ Acción al hacer clic
-            .addAction(R.drawable.ic_check, "Marcar como Tomado", pendingIntentMarcarTomado)
+            .setContentIntent(pendingIntentApp)
+            .addAction(R.drawable.ic_check, "Marcar como tomado", pendingTomar)
             .setAutoCancel(true)
+            .build()
 
-        notificationManager.notify(medicacionId.hashCode(), builder.build())
+        nm.notify(id.hashCode(), noti)
     }
 
+    private fun iniciarRecordatorioCada15Min(context: Context, id: String, nombre: String) {
+        val data = Data.Builder()
+            .putString("medicacion_id", id)
+            .putString("medicacion_nombre", nombre)
+            .build()
 
+        val work = OneTimeWorkRequestBuilder<RecordatorioRepetidoWorker>()
+            .setInputData(data)
+            .setInitialDelay(15, java.util.concurrent.TimeUnit.MINUTES)
+            .build()
+
+        WorkManager.getInstance(context).enqueueUniqueWork(id, ExistingWorkPolicy.KEEP, work)
+    }
 }
+
+
+
+

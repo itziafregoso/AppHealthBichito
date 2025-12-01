@@ -45,7 +45,6 @@ object FirebaseAguaHelper {
         // ✅ Si NO existe, crear el registro del día
         val nuevo = mapOf(
             "cantidad_ml" to 0,
-            "fecha" to hoy,
             "fecha_hora" to Timestamp.now()
         )
 

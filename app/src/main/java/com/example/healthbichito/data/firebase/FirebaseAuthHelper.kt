@@ -50,7 +50,9 @@ object FirebaseAuthHelper {
                 )
             }
     }
-
+    fun signOut() {
+        FirebaseAuth.getInstance().signOut()
+    }
 
     fun loginUsuario(
         email: String,
